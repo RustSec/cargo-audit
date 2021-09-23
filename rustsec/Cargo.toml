@@ -30,7 +30,7 @@ toml = "0.5"
 url = { version = "2", features = ["serde"] }
 
 [dependencies.cargo-edit]
-version = "0.7"
+version = "0.8"
 optional = true
 default-features = false
 features = ["upgrade"]
