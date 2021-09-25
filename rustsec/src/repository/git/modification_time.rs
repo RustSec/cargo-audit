@@ -31,12 +31,14 @@ impl GitModificationTimes {
             let commit_id = commit_id?;
             let commit = repo.find_commit(commit_id)?;
             // Ignore merge commits (2+ parents) because that's what 'git whatchanged' does.
-            // Ignore commit with 0 parents (initial commit) because there's nothing to diff against
-            if commit.parent_count() == 1 {
-                let prev_commit = commit.parent(0)?;
+            if commit.parent_count() <= 1 {
                 let tree = commit.tree()?;
-                let prev_tree = prev_commit.tree()?;
-                let diff = repo.diff_tree_to_tree(Some(&prev_tree), Some(&tree), None)?;
+                let prev_tree = match commit.parent_count() {
+                    1 => Some(commit.parent(0)?.tree()?), // Diff with the previous commit
+                    0 => None, // We've found the initial commit, diff with empty repo
+                    _ => unreachable!(), // Ruled out by the `if` above
+                };
+                let diff = repo.diff_tree_to_tree(prev_tree.as_ref(), Some(&tree), None)?;
                 for delta in diff.deltas() {
                     let file_path = delta.new_file().path().unwrap();
                     let file_mod_time = commit.time();
