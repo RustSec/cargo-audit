@@ -151,6 +151,37 @@ impl Auditor {
     }
 
     #[cfg(feature = "binary-scanning")]
+    /// Walk the directory recursively; audit each Rust binary with dependency data embedded by `cargo auditable`
+    pub fn audit_binaries_in_dir(&mut self, dir: &Path) -> MultiFileReportSummmary {
+        let mut summary = MultiFileReportSummmary::default();
+        for entry in walkdir::WalkDir::new(dir).into_iter() {
+            match entry {
+                Ok(entry) => {
+                    if entry.file_type().is_file() {
+                        match self.audit_binary_2(entry.path()) {
+                            Ok(Some(report)) => {
+                                if report.vulnerabilities.found {
+                                    summary.vulnerabilities_found = true;
+                                }
+                            }
+                            Ok(None) => (),
+                            Err(e) => {
+                                status_err!("{}", e);
+                                summary.errors_encountered = true;
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    summary.errors_encountered = true;
+                    status_err!("{}", e);
+                }
+            }
+        }
+        summary
+    }
+
+    #[cfg(feature = "binary-scanning")]
     /// Perform an audit of multiple binary files with dependency data embedded by `cargo auditable`
     pub fn audit_binaries<P>(&mut self, binaries: &[P]) -> MultiFileReportSummmary
     where
@@ -176,10 +207,37 @@ impl Auditor {
 
     #[cfg(feature = "binary-scanning")]
     /// Perform an audit of a binary file with dependency data embedded by `cargo auditable`
+    /// Treats '-' as stdin
     fn audit_binary(&mut self, binary_path: &Path) -> rustsec::Result<rustsec::Report> {
         self.presenter.before_binary_scan(binary_path);
-        let lockfile = self.load_deps_from_binary(binary_path)?;
+        // Read the input
+        let lockfile = if binary_path == Path::new("-") {
+            let stdin = io::stdin();
+            let mut handle = stdin.lock();
+            self.load_deps_from_binary(&mut handle)?
+        } else {
+            let file = std::fs::File::open("binary_path")?;
+            let mut file = std::io::BufReader::new(file);
+            self.load_deps_from_binary(&mut file)?
+        };
         self.audit(&lockfile)
+    }
+
+    #[cfg(feature = "binary-scanning")]
+    /// Perform an audit of a binary file with dependency data embedded by `cargo auditable`
+    /// Returns Ok(None) if it is not a Rust binary, or no audit data was found.
+    /// Does not treat '-' as stdin
+    fn audit_binary_2(&mut self, binary_path: &Path) -> rustsec::Result<Option<rustsec::Report>> {
+        let mut file = std::fs::File::open(binary_path)?;
+        if is_executable_file_format(&mut file)? {
+            self.presenter.before_binary_scan(binary_path);
+            let mut file = std::io::BufReader::new(file);
+            // TODO: handle the case of missing audit data, and return None
+            let lockfile = self.load_deps_from_binary(&mut file)?;
+            Ok(Some(self.audit(&lockfile)?))
+        } else {
+            Ok(None)
+        }
     }
 
     /// The part of the auditing process that is shared between auditing lockfiles and binary files
@@ -224,34 +282,13 @@ impl Auditor {
 
     #[cfg(feature = "binary-scanning")]
     /// Load the dependency tree from a binary file built with `cargo auditable`
-    fn load_deps_from_binary(&self, binary_path: &Path) -> rustsec::Result<Lockfile> {
-        // Read the input
-        let stuff = if binary_path == Path::new("-") {
-            let stdin = io::stdin();
-            let mut handle = stdin.lock();
-            auditable_info::audit_info_from_reader(&mut handle, Default::default())
-        } else {
-            auditable_info::audit_info_from_file(binary_path, Default::default())
-        };
-
-        // The error handling boilerplate is in here instead of the `rustsec` crate because as of this writing
-        // the public APIs of the crates involved are still somewhat unstable,
-        // and this way we don't expose the error types in any public APIs
-        use auditable_info::Error::*; // otherwise rustfmt makes the matches multiline and unreadable
-        match stuff {
-            Ok(json_struct) => Ok(cargo_lock::Lockfile::try_from(&json_struct)?),
-            Err(e) => match e {
-                NoAuditData => Err(Error::new(ErrorKind::NotFound, &e.to_string())),
-                Io(_) => Err(Error::new(ErrorKind::Io, &e.to_string())),
-                // Everything else is just Parse, but we enumerate them explicitly in case variant list changes
-                InputLimitExceeded => Err(Error::new(ErrorKind::Parse, &e.to_string())),
-                OutputLimitExceeded => Err(Error::new(ErrorKind::Parse, &e.to_string())),
-                BinaryParsing(_) => Err(Error::new(ErrorKind::Parse, &e.to_string())),
-                Decompression(_) => Err(Error::new(ErrorKind::Parse, &e.to_string())),
-                Json(_) => Err(Error::new(ErrorKind::Parse, &e.to_string())),
-                Utf8(_) => Err(Error::new(ErrorKind::Parse, &e.to_string())),
-            },
-        }
+    fn load_deps_from_binary<T: std::io::BufRead>(
+        &self,
+        binary: &mut T,
+    ) -> rustsec::Result<Lockfile> {
+        // TODO: pass in limits from the outside, from the command line parameters
+        let result = auditable_info::audit_info_from_reader(binary, Default::default());
+        handle_audit_info_errors(result)
     }
 
     /// Query the database for advisories about `cargo-audit` or `rustsec` itself
@@ -282,4 +319,40 @@ pub struct MultiFileReportSummmary {
     pub vulnerabilities_found: bool,
     /// Whether any errors were encountered during scanning
     pub errors_encountered: bool,
+}
+
+#[cfg(feature = "binary-scanning")]
+fn handle_audit_info_errors(
+    stuff: Result<auditable_serde::VersionInfo, auditable_info::Error>,
+) -> rustsec::Result<Lockfile> {
+    // The error handling boilerplate is in here instead of the `rustsec` crate because as of this writing
+    // the public APIs of the crates involved are still somewhat unstable,
+    // and this way we don't expose the error types in any public APIs
+    use auditable_info::Error::*; // otherwise rustfmt makes the matches multiline and unreadable
+    match stuff {
+        Ok(json_struct) => Ok(cargo_lock::Lockfile::try_from(&json_struct)?),
+        Err(e) => match e {
+            NoAuditData => Err(Error::new(ErrorKind::NotFound, &e.to_string())),
+            Io(_) => Err(Error::new(ErrorKind::Io, &e.to_string())),
+            // Everything else is just Parse, but we enumerate them explicitly in case variant list changes
+            InputLimitExceeded => Err(Error::new(ErrorKind::Parse, &e.to_string())),
+            OutputLimitExceeded => Err(Error::new(ErrorKind::Parse, &e.to_string())),
+            BinaryParsing(_) => Err(Error::new(ErrorKind::Parse, &e.to_string())),
+            Decompression(_) => Err(Error::new(ErrorKind::Parse, &e.to_string())),
+            Json(_) => Err(Error::new(ErrorKind::Parse, &e.to_string())),
+            Utf8(_) => Err(Error::new(ErrorKind::Parse, &e.to_string())),
+        },
+    }
+}
+
+#[cfg(feature = "binary-scanning")]
+fn is_executable_file_format(file: &mut std::fs::File) -> std::io::Result<bool> {
+    // Read the first 8 bytes to detect the format
+    let mut prefix: [u8; 8] = [0; 8];
+    file.read(&mut prefix)?;
+    io::Seek::rewind(file)?;
+    match binfarce::detect_format(&prefix) {
+        binfarce::Format::Unknown => Ok(false),
+        _ => Ok(true),
+    }
 }

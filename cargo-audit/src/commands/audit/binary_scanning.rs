@@ -111,7 +111,7 @@ pub struct BinCommand {
 
 impl Runnable for BinCommand {
     fn run(&self) {
-        let report = self.auditor().audit_binaries(&self.binary_paths);
+        let report = self.auditor().audit_binaries_in_dir(&self.binary_paths[0]);
         if report.vulnerabilities_found {
             exit(1)
         } else if report.errors_encountered {

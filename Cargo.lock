@@ -278,11 +278,14 @@ name = "cargo-audit"
 version = "0.17.2"
 dependencies = [
  "abscissa_core",
+ "auditable-extract",
  "auditable-info",
  "auditable-serde",
+ "binfarce",
  "cargo-lock 8.0.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "clap",
  "home",
+ "miniz_oxide 0.6.2",
  "once_cell",
  "rustsec",
  "serde",
@@ -290,6 +293,7 @@ dependencies = [
  "tempfile",
  "thiserror",
  "toml",
+ "walkdir",
 ]
 
 [[package]]
