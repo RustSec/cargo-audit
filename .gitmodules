@@ -1,0 +1,3 @@
+[submodule "cvss/tests/cvss-redhat"]
+	path = cvss/tests/cvss-redhat
+	url = https://github.com/RedHatProductSecurity/cvss.git

@@ -1,4 +1,4 @@
-//! CVSS metrics.
+//! CVSS v3.0/v3.1 metrics.
 
 use crate::{Error, Result};
 use alloc::borrow::ToOwned;
@@ -7,7 +7,7 @@ use core::{
     str::FromStr,
 };
 
-/// Trait for CVSS metrics.
+/// Trait for CVSSv3 metrics.
 pub trait Metric: Copy + Clone + Debug + Display + Eq + FromStr + Ord {
     /// [`MetricType`] of this metric.
     const TYPE: MetricType;
@@ -24,7 +24,7 @@ pub trait Metric: Copy + Clone + Debug + Display + Eq + FromStr + Ord {
     fn as_str(self) -> &'static str;
 }
 
-/// Enum over all of the available metrics.
+/// Enum over all of the available CVSSv3 metrics.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
 #[non_exhaustive]
 pub enum MetricType {

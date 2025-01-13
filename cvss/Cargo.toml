@@ -7,7 +7,7 @@ license      = "Apache-2.0 OR MIT"
 repository   = "https://github.com/rustsec/rustsec"
 readme       = "README.md"
 categories   = ["parser-implementations"]
-keywords     = ["cvssv3", "security", "advisory", "vulnerability"]
+keywords     = ["cvssv3", "cvssv4", "security", "advisory", "vulnerability"]
 edition      = "2021"
 rust-version = "1.60"
 
@@ -15,8 +15,9 @@ rust-version = "1.60"
 serde = { workspace = true, optional = true }
 
 [features]
-default = ["std", "v3"]
+default = ["std", "v3", "v4"]
 v3 = []
+v4 = []
 std = []
 
 [package.metadata.docs.rs]

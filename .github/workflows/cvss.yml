@@ -49,6 +49,7 @@ jobs:
           profile: minimal
           toolchain: ${{ matrix.rust }}
           override: true
+      - run: git submodule update --init
       - run: cargo check
       - run: cargo test --release
       - run: cargo test --all-features --release

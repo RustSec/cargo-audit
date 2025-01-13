@@ -13,10 +13,15 @@ use {
 /// Qualitative Severity Rating Scale
 ///
 /// Described in CVSS v3.1 Specification: Section 5:
-/// <https://www.first.org/cvss/specification-document#t17>
+/// <https://www.first.org/cvss/v3.1/specification-document#Qualitative-Severity-Rating-Scale>
+///
+/// And in CVSS v4.0 Specification: Section 6:
+/// <https://www.first.org/cvss/v4.0/specification-document#Qualitative-Severity-Rating-Scale>
+///
+/// The rating scales in v3 and v4 are the same.
 ///
 /// > For some purposes it is useful to have a textual representation of the
-/// > numeric Base, Temporal and Environmental scores.
+/// > scores.
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub enum Severity {
     /// None: CVSS Score 0.0

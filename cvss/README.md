@@ -8,7 +8,7 @@
 ![Apache 2.0 OR MIT licensed][license-image]
 [![Project Chat][zulip-image]][zulip-link]
 
-Rust implementation of the [Common Vulnerability Scoring System (Version 3.1) Specification][spec].
+Rust implementation of the [Common Vulnerability Scoring System (Version 3.1 and 4.0) Specification][spec].
 
 [Documentation][docs-link]
 
