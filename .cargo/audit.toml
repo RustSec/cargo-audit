@@ -1,6 +1,9 @@
 [advisories]
 ignore = []
 
+show = ["unmaintained", "unsound"]
+fatal = ["critical"]
+
 [output]
 quiet = false
 deny = ["warnings"]

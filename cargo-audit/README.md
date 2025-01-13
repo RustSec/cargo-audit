@@ -103,11 +103,14 @@ But there may be situations where an upgrade isn't available and the advisory do
 
 In these cases, you can ignore advisories using the `--ignore` option.
 
+
 ```
 $ cargo audit --ignore RUSTSEC-2017-0001
 ```
 
 This option can also be configured via the [`audit.toml`](./audit.toml.example) file.
+
+Cargo audit can be configured using a file called [audit.toml](./.cargo/audit.toml) This file is optional, and the default settings will work well for most people.
 
 ## Using `cargo audit` on Travis CI
 
