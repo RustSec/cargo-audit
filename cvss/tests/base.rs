@@ -5,6 +5,18 @@
 /// purposes of these tests
 use core::str::FromStr;
 
+#[test]
+fn test_full_vec() {
+    let cve_123 = "CVSS:3.1/AV:A/AC:H/PR:H/UI:R/S:C/C:L/I:L/A:L/CR:M/IR:H/AR:M/MAV:X/MAC:X/MPR:N/MUI:N/MS:C/MC:N/MI:X/MA:X";
+    let base = cvss::v3::cvss::CVSS::from_str(cve_123).unwrap();
+    assert_eq!(base.base.score().value(), 4.8);
+    assert_eq!(base.temporal.score(base.base.score()).value(), 4.8);
+    assert_eq!(
+        base.environmental.score(base.temporal, base.base).value(),
+        5.4
+    );
+}
+
 /// CVE-2013-1937
 #[test]
 fn cve_2013_1937() {

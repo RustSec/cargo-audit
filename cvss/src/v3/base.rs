@@ -28,6 +28,8 @@ use {
 #[cfg(feature = "std")]
 use crate::Severity;
 
+pub use crate::v3::base;
+
 /// CVSS v3.1 Base Metric Group
 ///
 /// Described in CVSS v3.1 Specification: Section 2:
@@ -260,6 +262,9 @@ impl FromStr for Base {
                 MetricType::C => metrics.c = Some(value.parse()?),
                 MetricType::I => metrics.i = Some(value.parse()?),
                 MetricType::A => metrics.a = Some(value.parse()?),
+                _ => {
+                    unimplemented!()
+                }
             }
         }
 
